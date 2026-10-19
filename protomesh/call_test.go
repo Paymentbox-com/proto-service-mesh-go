@@ -42,8 +42,8 @@ func TestCallSendsTheEncodedRequestAndDecodesTheReply(t *testing.T) {
 	if !sent[0].Message.Target.Equal(shop.OrderTargets.Place) {
 		t.Errorf("sent to %v", sent[0].Message.Target)
 	}
-	if sent[0].Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("sent metadata = %v, want Content-Type", sent[0].Message.Metadata)
+	if len(sent[0].Message.Metadata) != 1 || sent[0].Message.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("sent metadata = %v, want only Mesh-Content-Type", sent[0].Message.Metadata)
 	}
 	var wire shop.Order
 	if err := proto.Unmarshal(sent[0].Message.Payload, &wire); err != nil {
@@ -59,7 +59,9 @@ func TestCallSendsTheMetadataAsMessageMetadata(t *testing.T) {
 		Place: func(context.Context, *shop.Order) (*shop.Order, error) { return &shop.Order{}, nil },
 	})
 
-	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, map[string]string{"Request-Id": "7", protomesh.ContentTypeKey: "text/plain"})
+	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, map[string]string{
+		"Request-Id": "7", protomesh.MeshContentTypeKey: "text/plain", "Content-Type": "text/plain", "Grpc-Status": "5",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +70,13 @@ func TestCallSendsTheMetadataAsMessageMetadata(t *testing.T) {
 	if sent.Message.Metadata["Request-Id"] != "7" {
 		t.Errorf("sent metadata = %v, want Request-Id", sent.Message.Metadata)
 	}
-	if sent.Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the caller's", sent.Message.Metadata[protomesh.ContentTypeKey])
+	if sent.Message.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Mesh-Content-Type = %q, want the package's value over the caller's", sent.Message.Metadata[protomesh.MeshContentTypeKey])
+	}
+	for _, k := range []string{"Content-Type", "Grpc-Status"} {
+		if v, ok := sent.Message.Metadata[k]; ok {
+			t.Errorf("%s = %q, want the caller's value dropped", k, v)
+		}
 	}
 	if len(sent.Options) != 0 {
 		t.Errorf("options = %v, want none", sent.Options)
@@ -91,7 +98,7 @@ func TestCallPassesOptionKeysAsTransportOptions(t *testing.T) {
 		t.Errorf("options = %v, want only request_timeout 2s", sent.Options)
 	}
 	if len(sent.Message.Metadata) != 2 || sent.Message.Metadata["Request-Id"] != "7" {
-		t.Errorf("sent metadata = %v, want Request-Id and Content-Type only", sent.Message.Metadata)
+		t.Errorf("sent metadata = %v, want Request-Id and Mesh-Content-Type only", sent.Message.Metadata)
 	}
 	if len(md) != 2 || md["Mesh-Option-request_timeout"] != "2s" {
 		t.Errorf("caller's map = %v, want it unchanged", md)
@@ -123,6 +130,29 @@ func TestCallReturnsTheMeshErrorAReplyCarries(t *testing.T) {
 	}
 }
 
+func TestCallReturnsTheMeshErrorOfAReplyFromAnOlderVersion(t *testing.T) {
+	logs := captureWarnings(t)
+	serveRaw(t, []mesh.Endpoint{{Target: shop.OrderTargets.Place, Handler: func(context.Context, mesh.Message) (mesh.Message, error) {
+		md := map[string]string{"Content-Type": protomesh.ContentTypeProtobuf, "Grpc-Status": "5"}
+		return mesh.Message{Metadata: md, Payload: mustMarshal(t, protomesh.NewNotFoundError("no such key").Proto())}, nil
+	}}}, nil)
+
+	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
+
+	var me *protomesh.MeshError
+	if !errors.As(err, &me) {
+		t.Fatalf("err = %v, want *MeshError", err)
+	}
+	if me.Code() != code.Code_NOT_FOUND || me.Message() != "no such key" {
+		t.Errorf("MeshError = %v %q", me.Code(), me.Message())
+	}
+	for _, want := range []string{"key=Content-Type replacement=Mesh-Content-Type", "key=Grpc-Status replacement=Mesh-Status"} {
+		if !strings.Contains(logs.String(), want) {
+			t.Errorf("logged %q, want a warning with %s", logs.String(), want)
+		}
+	}
+}
+
 func TestCallReturnsTheReplyMetadataOfASuccessfulReply(t *testing.T) {
 	serveMem(t, shop.OrderService{
 		Place: func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
@@ -136,8 +166,8 @@ func TestCallReturnsTheReplyMetadataOfASuccessfulReply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(md) != 2 || md["Request-Id"] != "7" || md[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("reply metadata = %v, want Request-Id and Content-Type", md)
+	if len(md) != 2 || md["Request-Id"] != "7" || md[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("reply metadata = %v, want Request-Id and Mesh-Content-Type", md)
 	}
 }
 
@@ -155,8 +185,8 @@ func TestCallReturnsTheReplyMetadataOfAMeshErrorReply(t *testing.T) {
 	if !errors.As(err, &me) {
 		t.Fatalf("err = %v, want *MeshError", err)
 	}
-	if md["Retry-After"] != "30" || md[protomesh.GrpcStatusKey] != "5" {
-		t.Errorf("reply metadata = %v, want Retry-After and Grpc-Status 5", md)
+	if md["Retry-After"] != "30" || md[protomesh.MeshStatusKey] != "5" {
+		t.Errorf("reply metadata = %v, want Retry-After and Mesh-Status 5", md)
 	}
 }
 
@@ -194,7 +224,7 @@ func TestCallReturnsInternalForAnUndecodableResponse(t *testing.T) {
 
 func TestCallReturnsInternalForAnUndecodableStatusPayload(t *testing.T) {
 	serveRaw(t, []mesh.Endpoint{{Target: shop.OrderTargets.Place, Handler: func(context.Context, mesh.Message) (mesh.Message, error) {
-		return mesh.Message{Metadata: map[string]string{protomesh.GrpcStatusKey: "5"}, Payload: garbage}, nil
+		return mesh.Message{Metadata: map[string]string{protomesh.MeshStatusKey: "5"}, Payload: garbage}, nil
 	}}}, nil)
 
 	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
@@ -255,8 +285,8 @@ func TestPublishSendsTheEncodedMessageToTheSubscriber(t *testing.T) {
 	if !sent[0].Message.Target.Equal(shop.OrderTargets.Placed) {
 		t.Errorf("sent to %v", sent[0].Message.Target)
 	}
-	if sent[0].Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("sent metadata = %v, want Content-Type", sent[0].Message.Metadata)
+	if sent[0].Message.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("sent metadata = %v, want Mesh-Content-Type", sent[0].Message.Metadata)
 	}
 }
 
@@ -275,7 +305,7 @@ func TestPublishSplitsOptionKeysFromTheMessageMetadata(t *testing.T) {
 		t.Errorf("options = %v, want only publish_timeout 2s", sent.Options)
 	}
 	if len(sent.Message.Metadata) != 2 || sent.Message.Metadata["Request-Id"] != "7" {
-		t.Errorf("sent metadata = %v, want Request-Id and Content-Type only", sent.Message.Metadata)
+		t.Errorf("sent metadata = %v, want Request-Id and Mesh-Content-Type only", sent.Message.Metadata)
 	}
 }
 

@@ -17,16 +17,19 @@ import (
 //
 // The keys of md that start with OptionPrefix are transport options: the
 // transport's Request receives each one with the prefix removed. The other
-// keys of md are the message metadata, and the package sets Content-Type
-// over a value in md.
+// keys of md are the message metadata. The package sets Mesh-Content-Type
+// and drops any Mesh-Status, Content-Type, or Grpc-Status in md.
 //
 // The returned map is a copy of the reply's metadata without keys that
 // start with OptionPrefix, on a successful reply and on a MeshError reply.
 // It is nil when no reply arrived.
 //
-// Grpc-Status on the reply is read before the payload. When it is set, the
-// payload is decoded as google.rpc.Status and returned as a *MeshError. When
-// it is not, the payload is decoded as Resp. A payload that does not decode,
+// Mesh-Status on the reply is read before the payload, or Grpc-Status when
+// the reply has no Mesh-Status. When either is set, the payload is decoded
+// as google.rpc.Status and returned as a *MeshError. When neither is, the
+// payload is decoded as Resp. A reply that carries Grpc-Status without
+// Mesh-Status, or Content-Type without Mesh-Content-Type, comes from an
+// older version, and the first such reply on t logs a warning. A payload that does not decode,
 // or a req that does not encode, returns an INTERNAL *MeshError. Router,
 // Service Mesh API, and transport errors are returned unchanged.
 func Call[Req, Resp proto.Message](ctx context.Context, t mesh.Target, req Req, md map[string]string) (Resp, map[string]string, error) {
@@ -40,7 +43,9 @@ func Call[Req, Resp proto.Message](ctx context.Context, t mesh.Target, req Req, 
 		return zero, nil, err
 	}
 	replyMD, _ := splitOptions(reply.Metadata)
-	if _, ok := reply.Metadata[GrpcStatusKey]; ok {
+	legacyContentType(t, reply.Metadata)
+	_, isStatus := reply.Metadata[MeshStatusKey]
+	if isStatus || legacyStatus(t, reply.Metadata) {
 		st, err := decode[*status.Status]("reply", reply.Payload)
 		if err != nil {
 			return zero, replyMD, NewMeshError(code.Code_INTERNAL, err.Error())
@@ -79,7 +84,8 @@ func prepare(t mesh.Target, req proto.Message, md map[string]string) (mesh.Clien
 		return nil, mesh.Message{}, nil, NewMeshError(code.Code_INTERNAL, fmt.Sprintf("request does not encode as %s: %v", req.ProtoReflect().Descriptor().FullName(), err))
 	}
 	msgMD, opts := splitOptions(md)
-	msgMD[ContentTypeKey] = ContentTypeProtobuf
+	msgMD = withoutWireKeys(msgMD)
+	msgMD[MeshContentTypeKey] = ContentTypeProtobuf
 	return c, mesh.Message{Target: t, Metadata: msgMD, Payload: payload}, opts, nil
 }
 

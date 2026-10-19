@@ -99,8 +99,8 @@ func (o *Orders) Place(ctx context.Context, req *shop.Order) (*shop.Order, error
 ```
 
 A `*MeshError` becomes a reply whose payload is the encoded
-`google.rpc.Status` and whose metadata carries `Grpc-Status`, the code as a
-decimal integer string, beside `Content-Type`.
+`google.rpc.Status` and whose metadata carries `Mesh-Status`, the code as a
+decimal integer string, beside `Mesh-Content-Type`.
 
 Any other error, and a panic, is reported the same way as `UNKNOWN` (2), with
 the failure's text as the message.
@@ -122,10 +122,10 @@ A `ROUTE` handler sets metadata on its reply with `SetReplyMetadata`. The reply
 carries that metadata on success and on a `*MeshError` reply, including the
 `UNKNOWN` reply for another error or a panic.
 
-The package writes `Content-Type` and `Grpc-Status` after the application's
-values, so its own values win, and a successful reply carries no
-`Grpc-Status`. Keys that start with `Mesh-Option-` are removed from the reply's
-metadata.
+The package sets `Mesh-Content-Type` and `Mesh-Status` itself, along with the
+deprecated `Content-Type` and `Grpc-Status`, and drops the application's
+values for all four. A successful reply carries no status. Keys that start
+with `Mesh-Option-` are removed from the reply's metadata.
 
 ```go
 func (o *Orders) Place(ctx context.Context, req *shop.Order) (*shop.Order, error) {

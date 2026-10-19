@@ -9,22 +9,41 @@
 // refers to the two process singletons, DefaultTransportRouter and
 // DefaultRegistry, which the application configures at boot.
 //
-// Every message the package sends carries metadata Content-Type set to
+// Every message the package sends carries metadata Mesh-Content-Type set to
 // application/x-protobuf. A reply that carries a MeshError also carries
-// Grpc-Status, the google.rpc.Code as a decimal string, and its payload is
+// Mesh-Status, the google.rpc.Code as a decimal string, and its payload is
 // the encoded google.rpc.Status.
+//
+// Content-Type and Grpc-Status are the deprecated forms of those keys, which
+// older versions of the package send and read. A reply to a request that
+// carries Content-Type without Mesh-Content-Type also carries Content-Type
+// and, for a MeshError, Grpc-Status. Call reads Grpc-Status when a reply has
+// no Mesh-Status. The first message on a Target that carries a deprecated
+// key without its replacement logs a warning through slog.Default.
 package protomesh
 
 // Metadata keys the package writes and reads.
 const (
-	// ContentTypeKey is the metadata key every sent message carries.
-	ContentTypeKey = "Content-Type"
+	// MeshContentTypeKey is the metadata key every sent message carries.
+	MeshContentTypeKey = "Mesh-Content-Type"
 
-	// ContentTypeProtobuf is the value of ContentTypeKey on every sent message.
+	// ContentTypeProtobuf is the value of MeshContentTypeKey on every sent
+	// message.
 	ContentTypeProtobuf = "application/x-protobuf"
 
-	// GrpcStatusKey marks a reply whose payload is an encoded google.rpc.Status.
-	// Its value is the code as a decimal integer string.
+	// MeshStatusKey marks a reply whose payload is an encoded
+	// google.rpc.Status. Its value is the code as a decimal integer string.
+	MeshStatusKey = "Mesh-Status"
+
+	// ContentTypeKey is the key older versions send in place of
+	// MeshContentTypeKey.
+	//
+	// Deprecated: Use MeshContentTypeKey.
+	ContentTypeKey = "Content-Type"
+
+	// GrpcStatusKey is the key older versions send in place of MeshStatusKey.
+	//
+	// Deprecated: Use MeshStatusKey.
 	GrpcStatusKey = "Grpc-Status"
 
 	// OptionPrefix starts the keys of an outgoing metadata map that are

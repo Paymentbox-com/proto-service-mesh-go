@@ -54,7 +54,7 @@ For example, `Mesh-Option-request_timeout: 2s` reaches the transport as the
 option `request_timeout: 2s`.
 
 Every other key is sent as message metadata. The caller's map is not modified.
-A nil map sends a message whose only metadata is `Content-Type`, with no
+A nil map sends a message whose only metadata is `Mesh-Content-Type`, with no
 options.
 
 ## Reply Metadata
@@ -68,10 +68,11 @@ it receives.
 
 ## Reply Decoding
 
-`Call` reads `Grpc-Status` on the reply before the payload. When it is set,
-the payload is decoded as `google.rpc.Status` and returned as a `*MeshError`,
-whose code is the one inside the `Status`. When it is not set, the payload is
-decoded as the response type.
+`Call` reads `Mesh-Status` on the reply before the payload, or `Grpc-Status`
+when the reply has no `Mesh-Status`. When either is set, the payload is
+decoded as `google.rpc.Status` and returned as a `*MeshError`, whose code is
+the one inside the `Status`. When neither is set, the payload is decoded as
+the response type.
 
 A payload that does not decode returns an `INTERNAL` (13) `*MeshError` whose
 message names the expected type, such as
@@ -87,9 +88,25 @@ unchanged.
 ## Wire Format
 
 Every message the package sends carries the metadata
-`Content-Type: application/x-protobuf`. A `Content-Type` in the metadata map is
-overwritten.
+`Mesh-Content-Type: application/x-protobuf`. A `Mesh-Content-Type` in the
+metadata map is overwritten, and a `Mesh-Status`, `Content-Type`, or
+`Grpc-Status` is dropped.
 
-A reply that reports a `*MeshError` also carries `Grpc-Status`, the code as a
+A reply that reports a `*MeshError` also carries `Mesh-Status`, the code as a
 decimal integer string, and its payload is the encoded `google.rpc.Status`.
 Every other payload is the message's binary protobuf encoding.
+
+## Older Versions
+
+Versions before v0.18.0 send `Content-Type` in place of `Mesh-Content-Type`
+and `Grpc-Status` in place of `Mesh-Status`. Those keys are deprecated, and a
+later version stops reading and writing them.
+
+- A request that carries `Content-Type` without `Mesh-Content-Type` comes from
+  an older version. Its reply also carries `Content-Type`, and `Grpc-Status`
+  beside `Mesh-Status` for a `*MeshError`.
+- `Call` reads `Grpc-Status` when a reply has no `Mesh-Status`.
+- The first message on a target that carries `Content-Type` without
+  `Mesh-Content-Type`, or `Grpc-Status` without `Mesh-Status`, logs a warning
+  through `slog.Default()` naming the key and the target. Later messages on
+  that target with the same key log nothing.

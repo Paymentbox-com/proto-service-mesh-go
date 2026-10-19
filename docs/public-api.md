@@ -19,8 +19,9 @@ Every exported name in package `protomesh`.
 | `MeshError` | Described under [MeshError](mesherror.md). `NewMeshError`, `MeshErrorFromProto`, and one `New<Code>Error` per code build one. Its methods are `Code`, `Message`, `Details`, `Proto`, and `Error`. |
 | `OK`, `NotFound`, `Internal`, and the rest | The `google.rpc.Code` values, as `code.Code` constants. |
 | `OptionPrefix` | `"Mesh-Option-"`, the prefix that marks a metadata key as a transport option. |
-| `ContentTypeKey`, `ContentTypeProtobuf` | `"Content-Type"` and `"application/x-protobuf"`, the metadata every sent message carries. |
-| `GrpcStatusKey` | `"Grpc-Status"`, the metadata key that marks a reply carrying a `google.rpc.Status`. |
+| `MeshContentTypeKey`, `ContentTypeProtobuf` | `"Mesh-Content-Type"` and `"application/x-protobuf"`, the metadata every sent message carries. |
+| `MeshStatusKey` | `"Mesh-Status"`, the metadata key that marks a reply carrying a `google.rpc.Status`. |
+| `ContentTypeKey`, `GrpcStatusKey` | Deprecated. `"Content-Type"` and `"Grpc-Status"`, the keys older versions send, described under [Older Versions](calling.md#older-versions). |
 | `TransportKey` | `"transport"`, the `Target` metadata key that names the transport. |
 | `ErrUnknownTransport`, `ErrNoRuntimeConstructor` | Listed under [Library Errors](mesherror.md#library-errors). |
 

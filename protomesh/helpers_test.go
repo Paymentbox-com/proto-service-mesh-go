@@ -1,7 +1,9 @@
 package protomesh_test
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/Paymentbox-com/proto-service-mesh-go/internal/memtransport"
@@ -92,4 +94,23 @@ func mustMarshal(t *testing.T, m proto.Message) []byte {
 
 func order(id string) *shop.Order {
 	return &shop.Order{Id: proto.String(id)}
+}
+
+// captureWarnings sends slog.Default's output to the returned buffer, without
+// times, and forgets which deprecated keys have been logged.
+func captureWarnings(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				return slog.Attr{}
+			}
+			return a
+		},
+	})))
+	protomesh.ResetDeprecationWarnings()
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	return &buf
 }

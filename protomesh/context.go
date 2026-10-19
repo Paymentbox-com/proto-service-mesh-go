@@ -21,9 +21,10 @@ func IncomingMetadata(ctx context.Context) map[string]string {
 
 // SetReplyMetadata merges md into the metadata of the reply the endpoint
 // handler serving ctx sends. A later call adds keys and overwrites the ones
-// already set. Keys that start with OptionPrefix are dropped. Content-Type
-// and Grpc-Status are set by the package and override values in md. Outside
-// an endpoint handler it has no effect.
+// already set. Keys that start with OptionPrefix are dropped. The package
+// sets Mesh-Content-Type, Mesh-Status, Content-Type, and Grpc-Status itself
+// and drops values for them in md. Outside an endpoint handler it has no
+// effect.
 func SetReplyMetadata(ctx context.Context, md map[string]string) {
 	if reply, ok := ctx.Value(handlerReplyKey).(map[string]string); ok {
 		for k, v := range md {

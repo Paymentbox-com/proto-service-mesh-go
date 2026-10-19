@@ -3,6 +3,7 @@ package protomesh_test
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -52,11 +53,11 @@ func TestEndpointRepliesWithTheEncodedResponse(t *testing.T) {
 	if resp.GetId() != "reply" {
 		t.Errorf("reply decodes to %v", &resp)
 	}
-	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("reply metadata = %v, want Mesh-Content-Type", reply.Metadata)
 	}
-	if _, ok := reply.Metadata[protomesh.GrpcStatusKey]; ok {
-		t.Error("a successful reply carries Grpc-Status")
+	if _, ok := reply.Metadata[protomesh.MeshStatusKey]; ok {
+		t.Error("a successful reply carries Mesh-Status")
 	}
 }
 
@@ -87,11 +88,11 @@ func TestEndpointRepliesAMeshErrorAsAStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "5" {
+		t.Errorf("Mesh-Status = %q, want 5", reply.Metadata[protomesh.MeshStatusKey])
 	}
-	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("reply metadata = %v, want Mesh-Content-Type", reply.Metadata)
 	}
 	st := statusOf(t, reply)
 	if st.GetCode() != 5 || st.GetMessage() != "no such key" || len(st.GetDetails()) != 1 {
@@ -109,8 +110,8 @@ func TestEndpointRepliesUnknownForAnyOtherError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[protomesh.GrpcStatusKey] != "2" {
-		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "2" {
+		t.Errorf("Mesh-Status = %q, want 2", reply.Metadata[protomesh.MeshStatusKey])
 	}
 	st := statusOf(t, reply)
 	if st.GetCode() != 2 || st.GetMessage() != "database down" {
@@ -128,8 +129,8 @@ func TestEndpointRepliesUnknownForAPanic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[protomesh.GrpcStatusKey] != "2" {
-		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "2" {
+		t.Errorf("Mesh-Status = %q, want 2", reply.Metadata[protomesh.MeshStatusKey])
 	}
 	if st := statusOf(t, reply); !strings.Contains(st.GetMessage(), "boom") {
 		t.Errorf("status message = %q, want the panic value in it", st.GetMessage())
@@ -151,8 +152,8 @@ func TestEndpointRepliesWithTheReplyMetadataTheHandlerSets(t *testing.T) {
 	if reply.Metadata["Request-Id"] != "7" || reply.Metadata["Region"] != "west" {
 		t.Errorf("reply metadata = %v, want Request-Id 7 and the later Region west", reply.Metadata)
 	}
-	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("reply metadata = %v, want Mesh-Content-Type", reply.Metadata)
 	}
 }
 
@@ -170,8 +171,8 @@ func TestEndpointRepliesAMeshErrorWithTheReplyMetadataTheHandlerSets(t *testing.
 	if reply.Metadata["Retry-After"] != "30" {
 		t.Errorf("reply metadata = %v, want Retry-After", reply.Metadata)
 	}
-	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "5" {
+		t.Errorf("Mesh-Status = %q, want 5", reply.Metadata[protomesh.MeshStatusKey])
 	}
 }
 
@@ -194,9 +195,12 @@ func TestEndpointDropsOptionKeysTheHandlerSetsOnItsReply(t *testing.T) {
 	}
 }
 
-func TestEndpointOverwritesContentTypeAndGrpcStatusTheHandlerSetsOnAMeshErrorReply(t *testing.T) {
+func TestEndpointReplacesTheWireKeysTheHandlerSetsOnAMeshErrorReply(t *testing.T) {
 	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		protomesh.SetReplyMetadata(ctx, map[string]string{protomesh.ContentTypeKey: "text/plain", protomesh.GrpcStatusKey: "0"})
+		protomesh.SetReplyMetadata(ctx, map[string]string{
+			protomesh.MeshContentTypeKey: "text/plain", protomesh.MeshStatusKey: "0",
+			"Content-Type": "text/plain", "Grpc-Status": "0",
+		})
 		return nil, protomesh.NewNotFoundError("no such key")
 	})
 
@@ -205,17 +209,25 @@ func TestEndpointOverwritesContentTypeAndGrpcStatusTheHandlerSetsOnAMeshErrorRep
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.ContentTypeKey])
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Mesh-Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.MeshContentTypeKey])
 	}
-	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want the package's 5 over the handler's", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "5" {
+		t.Errorf("Mesh-Status = %q, want the package's 5 over the handler's", reply.Metadata[protomesh.MeshStatusKey])
+	}
+	for _, k := range []string{"Content-Type", "Grpc-Status"} {
+		if v, ok := reply.Metadata[k]; ok {
+			t.Errorf("%s = %q, want the handler's value dropped", k, v)
+		}
 	}
 }
 
-func TestEndpointOverwritesContentTypeAndDropsGrpcStatusTheHandlerSetsOnASuccessfulReply(t *testing.T) {
+func TestEndpointReplacesTheWireKeysTheHandlerSetsOnASuccessfulReply(t *testing.T) {
 	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		protomesh.SetReplyMetadata(ctx, map[string]string{protomesh.ContentTypeKey: "text/plain", protomesh.GrpcStatusKey: "5"})
+		protomesh.SetReplyMetadata(ctx, map[string]string{
+			protomesh.MeshContentTypeKey: "text/plain", protomesh.MeshStatusKey: "5",
+			"Content-Type": "text/plain", "Grpc-Status": "5",
+		})
 		return order("reply"), nil
 	})
 
@@ -224,11 +236,71 @@ func TestEndpointOverwritesContentTypeAndDropsGrpcStatusTheHandlerSetsOnASuccess
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.ContentTypeKey])
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Mesh-Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.MeshContentTypeKey])
 	}
-	if v, ok := reply.Metadata[protomesh.GrpcStatusKey]; ok {
-		t.Errorf("Grpc-Status = %q on a successful reply, want none", v)
+	for _, k := range []string{protomesh.MeshStatusKey, "Content-Type", "Grpc-Status"} {
+		if v, ok := reply.Metadata[k]; ok {
+			t.Errorf("%s = %q on a successful reply, want none", k, v)
+		}
+	}
+}
+
+func TestEndpointRepliesWithContentTypeToARequestFromAnOlderVersion(t *testing.T) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+		return order("reply"), nil
+	})
+
+	reply, err := ep.Handler(context.Background(), mesh.Message{Metadata: map[string]string{"Content-Type": protomesh.ContentTypeProtobuf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reply.Metadata[protomesh.MeshContentTypeKey] != protomesh.ContentTypeProtobuf || reply.Metadata["Content-Type"] != protomesh.ContentTypeProtobuf {
+		t.Errorf("reply metadata = %v, want Mesh-Content-Type and Content-Type", reply.Metadata)
+	}
+	for _, k := range []string{protomesh.MeshStatusKey, "Grpc-Status"} {
+		if v, ok := reply.Metadata[k]; ok {
+			t.Errorf("%s = %q on a successful reply, want none", k, v)
+		}
+	}
+}
+
+func TestEndpointRepliesAMeshErrorWithGrpcStatusToARequestFromAnOlderVersion(t *testing.T) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+		return nil, protomesh.NewNotFoundError("no such key")
+	})
+
+	reply, err := ep.Handler(context.Background(), mesh.Message{Metadata: map[string]string{"Content-Type": protomesh.ContentTypeProtobuf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{
+		protomesh.MeshContentTypeKey: protomesh.ContentTypeProtobuf, "Content-Type": protomesh.ContentTypeProtobuf,
+		protomesh.MeshStatusKey: "5", "Grpc-Status": "5",
+	}
+	if !maps.Equal(reply.Metadata, want) {
+		t.Errorf("reply metadata = %v, want %v", reply.Metadata, want)
+	}
+}
+
+func TestEndpointWarnsOnceForRequestsFromAnOlderVersion(t *testing.T) {
+	logs := captureWarnings(t)
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+		return &shop.Order{}, nil
+	})
+	old := mesh.Message{Metadata: map[string]string{"Content-Type": protomesh.ContentTypeProtobuf}}
+
+	for range 2 {
+		if _, err := ep.Handler(context.Background(), old); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want := `level=WARN msg="protomesh: message carries a deprecated metadata key; the sender runs an older version" key=Content-Type replacement=Mesh-Content-Type target="[shop OrderService Place]"` + "\n"
+	if logs.String() != want {
+		t.Errorf("logged %q, want %q", logs.String(), want)
 	}
 }
 
@@ -247,8 +319,8 @@ func TestEndpointRepliesInternalForAnUndecodableRequest(t *testing.T) {
 	if called {
 		t.Error("handler ran on an undecodable request")
 	}
-	if reply.Metadata[protomesh.GrpcStatusKey] != "13" {
-		t.Errorf("Grpc-Status = %q, want 13", reply.Metadata[protomesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.MeshStatusKey] != "13" {
+		t.Errorf("Mesh-Status = %q, want 13", reply.Metadata[protomesh.MeshStatusKey])
 	}
 	if st := statusOf(t, reply); st.GetCode() != 13 || !strings.HasPrefix(st.GetMessage(), "request does not decode as shop.Order: ") {
 		t.Errorf("status = %v, want INTERNAL naming the request type", st)
@@ -352,5 +424,22 @@ func TestNewEndpointAndNewSubscriberWithoutAConsumerGroupSetNoMetadata(t *testin
 	}
 	if _, set := sub.Metadata[mesh.ConsumerGroupKey]; set {
 		t.Errorf("subscriber metadata = %v, want no consumer_group", sub.Metadata)
+	}
+}
+
+func TestSubscriberWarnsOnceForMessagesFromAnOlderVersion(t *testing.T) {
+	logs := captureWarnings(t)
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error { return nil })
+	old := mesh.Message{Metadata: map[string]string{"Content-Type": protomesh.ContentTypeProtobuf}}
+
+	for range 2 {
+		if err := sub.Handler(context.Background(), old); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want := `level=WARN msg="protomesh: message carries a deprecated metadata key; the sender runs an older version" key=Content-Type replacement=Mesh-Content-Type target="[shop OrderService Placed]"` + "\n"
+	if logs.String() != want {
+		t.Errorf("logged %q, want %q", logs.String(), want)
 	}
 }
