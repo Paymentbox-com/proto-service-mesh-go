@@ -1,12 +1,12 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"github.com/Paymentbox-com/service-mesh-go/mesh"
 )
 
@@ -20,11 +20,11 @@ func (s served) Endpoints() []mesh.Endpoint     { return s.endpoints }
 func (s served) Subscribers() []mesh.Subscriber { return s.subscribers }
 
 func route(transport string, segments ...string) mesh.Target {
-	return mesh.Target{Segments: segments, Kind: mesh.KindRoute, Metadata: map[string]string{grpcmesh.TransportKey: transport}}
+	return mesh.Target{Segments: segments, Kind: mesh.KindRoute, Metadata: map[string]string{protomesh.TransportKey: transport}}
 }
 
 func topic(transport string, segments ...string) mesh.Target {
-	return mesh.Target{Segments: segments, Kind: mesh.KindTopic, Metadata: map[string]string{grpcmesh.TransportKey: transport}}
+	return mesh.Target{Segments: segments, Kind: mesh.KindTopic, Metadata: map[string]string{protomesh.TransportKey: transport}}
 }
 
 func orderService() shop.OrderService {
@@ -35,7 +35,7 @@ func orderService() shop.OrderService {
 }
 
 func TestRegisterAcceptsAGeneratedService(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 
 	registry.Register(orderService())
 
@@ -52,7 +52,7 @@ func TestRegisterAcceptsAGeneratedService(t *testing.T) {
 }
 
 func TestRegistryReturnsEveryEndpointAndSubscriberRegistered(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 	registry.Register(served{
 		endpoints:   []mesh.Endpoint{{Target: route("mem", "shop", "A", "Get")}, {Target: route("nats", "billing", "B", "Get")}},
 		subscribers: []mesh.Subscriber{{Target: topic("mem", "shop", "A", "Made")}, {Target: topic("nats", "billing", "B", "Made")}},
@@ -67,9 +67,9 @@ func TestRegistryReturnsEveryEndpointAndSubscriberRegistered(t *testing.T) {
 }
 
 func TestWithConsumerGroupReplacesTheGeneratedGroupOfASubscriber(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 
-	registry.Register(orderService(), grpcmesh.WithConsumerGroup(shop.OrderTargets.Placed, "billing-ledger"))
+	registry.Register(orderService(), protomesh.WithConsumerGroup(shop.OrderTargets.Placed, "billing-ledger"))
 
 	if got := registry.Subscribers()[0].Metadata[mesh.ConsumerGroupKey]; got != "billing-ledger" {
 		t.Errorf("Placed consumer_group = %q, want billing-ledger", got)
@@ -77,9 +77,9 @@ func TestWithConsumerGroupReplacesTheGeneratedGroupOfASubscriber(t *testing.T) {
 }
 
 func TestWithConsumerGroupSetsTheGroupOfAnEndpoint(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 
-	registry.Register(orderService(), grpcmesh.WithConsumerGroup(shop.OrderTargets.Place, "orders"))
+	registry.Register(orderService(), protomesh.WithConsumerGroup(shop.OrderTargets.Place, "orders"))
 
 	if got := registry.Endpoints()[0].Metadata[mesh.ConsumerGroupKey]; got != "orders" {
 		t.Errorf("Place consumer_group = %q, want orders", got)
@@ -87,9 +87,9 @@ func TestWithConsumerGroupSetsTheGroupOfAnEndpoint(t *testing.T) {
 }
 
 func TestWithConsumerGroupEmptyRemovesTheGeneratedGroup(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 
-	registry.Register(orderService(), grpcmesh.WithConsumerGroup(shop.OrderTargets.Placed, ""))
+	registry.Register(orderService(), protomesh.WithConsumerGroup(shop.OrderTargets.Placed, ""))
 
 	if md := registry.Subscribers()[0].Metadata; md[mesh.ConsumerGroupKey] != "" {
 		t.Errorf("Placed metadata = %v, want no consumer_group", md)
@@ -97,11 +97,11 @@ func TestWithConsumerGroupEmptyRemovesTheGeneratedGroup(t *testing.T) {
 }
 
 func TestWithConsumerGroupLastValueForATargetWins(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 
 	registry.Register(orderService(),
-		grpcmesh.WithConsumerGroup(shop.OrderTargets.Placed, "first"),
-		grpcmesh.WithConsumerGroup(shop.OrderTargets.Placed, "second"))
+		protomesh.WithConsumerGroup(shop.OrderTargets.Placed, "first"),
+		protomesh.WithConsumerGroup(shop.OrderTargets.Placed, "second"))
 
 	if got := registry.Subscribers()[0].Metadata[mesh.ConsumerGroupKey]; got != "second" {
 		t.Errorf("Placed consumer_group = %q, want second", got)
@@ -109,7 +109,7 @@ func TestWithConsumerGroupLastValueForATargetWins(t *testing.T) {
 }
 
 func TestWithConsumerGroupPanicsForATargetOutsideTheService(t *testing.T) {
-	registry := grpcmesh.NewRegistry()
+	registry := protomesh.NewRegistry()
 	defer func() {
 		p := recover()
 		if msg, _ := p.(string); !strings.Contains(msg, "[billing Invoice Made]") {
@@ -120,5 +120,5 @@ func TestWithConsumerGroupPanicsForATargetOutsideTheService(t *testing.T) {
 		}
 	}()
 
-	registry.Register(orderService(), grpcmesh.WithConsumerGroup(topic("mem", "billing", "Invoice", "Made"), "x"))
+	registry.Register(orderService(), protomesh.WithConsumerGroup(topic("mem", "billing", "Invoice", "Made"), "x"))
 }

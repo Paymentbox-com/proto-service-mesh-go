@@ -1,4 +1,4 @@
-package grpcmesh
+package protomesh
 
 import (
 	"context"

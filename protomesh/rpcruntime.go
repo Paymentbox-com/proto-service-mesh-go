@@ -1,4 +1,4 @@
-package grpcmesh
+package protomesh
 
 import (
 	"context"
@@ -24,7 +24,7 @@ var _ mesh.Runtime = (*RPCRuntime)(nil)
 type NewRuntimeFunc func(mesh.Client, mesh.Config, []mesh.Endpoint, []mesh.Subscriber) (mesh.Runtime, error)
 
 // ErrNoRuntimeConstructor is returned by NewRPCRuntime when newRuntime is nil.
-var ErrNoRuntimeConstructor = errors.New("grpcmesh: NewRPCRuntime needs a runtime constructor; newRuntime is nil")
+var ErrNoRuntimeConstructor = errors.New("protomesh: NewRPCRuntime needs a runtime constructor; newRuntime is nil")
 
 // NewRPCRuntime builds the runtime for transport and deploymentGroup. It
 // takes the transport's Client from DefaultTransportRouter and every Endpoint

@@ -1,6 +1,6 @@
 # Public API
 
-Every exported name in package `grpcmesh`.
+Every exported name in package `protomesh`.
 
 | Name | Role |
 |---|---|

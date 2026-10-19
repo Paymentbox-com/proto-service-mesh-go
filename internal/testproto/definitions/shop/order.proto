@@ -1,5 +1,5 @@
 // The reference definitions the tests and docs use. `just proto-test`
-// generates internal/testproto from them with grpc-service-mesh-gen.
+// generates internal/testproto from them with proto-service-mesh-gen.
 syntax = "proto3";
 
 package shop;
@@ -7,7 +7,7 @@ package shop;
 import "mesh/options.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop";
+option go_package = "github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop";
 
 message Order {
   optional string id = 1;

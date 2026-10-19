@@ -1,4 +1,4 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/memtransport"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/memtransport"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"github.com/Paymentbox-com/service-mesh-go/mesh"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -24,7 +24,7 @@ func TestCallSendsTheEncodedRequestAndDecodesTheReply(t *testing.T) {
 		},
 	})
 
-	resp, _, err := grpcmesh.Call[*shop.Order, *shop.Order](context.Background(), shop.OrderTargets.Place, order("ask"), nil)
+	resp, _, err := protomesh.Call[*shop.Order, *shop.Order](context.Background(), shop.OrderTargets.Place, order("ask"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestCallSendsTheEncodedRequestAndDecodesTheReply(t *testing.T) {
 	if !sent[0].Message.Target.Equal(shop.OrderTargets.Place) {
 		t.Errorf("sent to %v", sent[0].Message.Target)
 	}
-	if sent[0].Message.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if sent[0].Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("sent metadata = %v, want Content-Type", sent[0].Message.Metadata)
 	}
 	var wire shop.Order
@@ -59,7 +59,7 @@ func TestCallSendsTheMetadataAsMessageMetadata(t *testing.T) {
 		Place: func(context.Context, *shop.Order) (*shop.Order, error) { return &shop.Order{}, nil },
 	})
 
-	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, map[string]string{"Request-Id": "7", grpcmesh.ContentTypeKey: "text/plain"})
+	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, map[string]string{"Request-Id": "7", protomesh.ContentTypeKey: "text/plain"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +68,8 @@ func TestCallSendsTheMetadataAsMessageMetadata(t *testing.T) {
 	if sent.Message.Metadata["Request-Id"] != "7" {
 		t.Errorf("sent metadata = %v, want Request-Id", sent.Message.Metadata)
 	}
-	if sent.Message.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the caller's", sent.Message.Metadata[grpcmesh.ContentTypeKey])
+	if sent.Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Content-Type = %q, want the package's value over the caller's", sent.Message.Metadata[protomesh.ContentTypeKey])
 	}
 	if len(sent.Options) != 0 {
 		t.Errorf("options = %v, want none", sent.Options)
@@ -101,7 +101,7 @@ func TestCallPassesOptionKeysAsTransportOptions(t *testing.T) {
 func TestCallReturnsTheMeshErrorAReplyCarries(t *testing.T) {
 	serveMem(t, shop.OrderService{
 		Place: func(context.Context, *shop.Order) (*shop.Order, error) {
-			return nil, grpcmesh.NewMeshError(code.Code_NOT_FOUND, "no such key", &errdetails.ErrorInfo{Reason: "GONE"})
+			return nil, protomesh.NewMeshError(code.Code_NOT_FOUND, "no such key", &errdetails.ErrorInfo{Reason: "GONE"})
 		},
 	})
 
@@ -110,7 +110,7 @@ func TestCallReturnsTheMeshErrorAReplyCarries(t *testing.T) {
 	if resp != nil {
 		t.Errorf("resp = %v, want nil", resp)
 	}
-	var me *grpcmesh.MeshError
+	var me *protomesh.MeshError
 	if !errors.As(err, &me) {
 		t.Fatalf("err = %v, want *MeshError", err)
 	}
@@ -126,7 +126,7 @@ func TestCallReturnsTheMeshErrorAReplyCarries(t *testing.T) {
 func TestCallReturnsTheReplyMetadataOfASuccessfulReply(t *testing.T) {
 	serveMem(t, shop.OrderService{
 		Place: func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-			grpcmesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
+			protomesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
 			return &shop.Order{}, nil
 		},
 	})
@@ -136,7 +136,7 @@ func TestCallReturnsTheReplyMetadataOfASuccessfulReply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(md) != 2 || md["Request-Id"] != "7" || md[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if len(md) != 2 || md["Request-Id"] != "7" || md[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("reply metadata = %v, want Request-Id and Content-Type", md)
 	}
 }
@@ -144,18 +144,18 @@ func TestCallReturnsTheReplyMetadataOfASuccessfulReply(t *testing.T) {
 func TestCallReturnsTheReplyMetadataOfAMeshErrorReply(t *testing.T) {
 	serveMem(t, shop.OrderService{
 		Place: func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-			grpcmesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
-			return nil, grpcmesh.NewNotFoundError("no such key")
+			protomesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
+			return nil, protomesh.NewNotFoundError("no such key")
 		},
 	})
 
 	_, md, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
 
-	var me *grpcmesh.MeshError
+	var me *protomesh.MeshError
 	if !errors.As(err, &me) {
 		t.Fatalf("err = %v, want *MeshError", err)
 	}
-	if md["Retry-After"] != "30" || md[grpcmesh.GrpcStatusKey] != "5" {
+	if md["Retry-After"] != "30" || md[protomesh.GrpcStatusKey] != "5" {
 		t.Errorf("reply metadata = %v, want Retry-After and Grpc-Status 5", md)
 	}
 }
@@ -183,7 +183,7 @@ func TestCallReturnsInternalForAnUndecodableResponse(t *testing.T) {
 
 	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
 
-	var me *grpcmesh.MeshError
+	var me *protomesh.MeshError
 	if !errors.As(err, &me) {
 		t.Fatalf("err = %v, want *MeshError", err)
 	}
@@ -194,12 +194,12 @@ func TestCallReturnsInternalForAnUndecodableResponse(t *testing.T) {
 
 func TestCallReturnsInternalForAnUndecodableStatusPayload(t *testing.T) {
 	serveRaw(t, []mesh.Endpoint{{Target: shop.OrderTargets.Place, Handler: func(context.Context, mesh.Message) (mesh.Message, error) {
-		return mesh.Message{Metadata: map[string]string{grpcmesh.GrpcStatusKey: "5"}, Payload: garbage}, nil
+		return mesh.Message{Metadata: map[string]string{protomesh.GrpcStatusKey: "5"}, Payload: garbage}, nil
 	}}}, nil)
 
 	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
 
-	var me *grpcmesh.MeshError
+	var me *protomesh.MeshError
 	if !errors.As(err, &me) {
 		t.Fatalf("err = %v, want *MeshError", err)
 	}
@@ -226,7 +226,7 @@ func TestCallUnknownTransport(t *testing.T) {
 
 	_, _, err := shop.OrderClient.Place(context.Background(), &shop.Order{}, nil)
 
-	if !errors.Is(err, grpcmesh.ErrUnknownTransport) {
+	if !errors.Is(err, protomesh.ErrUnknownTransport) {
 		t.Errorf("err = %v, want ErrUnknownTransport", err)
 	}
 }
@@ -255,7 +255,7 @@ func TestPublishSendsTheEncodedMessageToTheSubscriber(t *testing.T) {
 	if !sent[0].Message.Target.Equal(shop.OrderTargets.Placed) {
 		t.Errorf("sent to %v", sent[0].Message.Target)
 	}
-	if sent[0].Message.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if sent[0].Message.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("sent metadata = %v, want Content-Type", sent[0].Message.Metadata)
 	}
 }
@@ -282,7 +282,7 @@ func TestPublishSplitsOptionKeysFromTheMessageMetadata(t *testing.T) {
 func TestPublishPassesKindMismatchThrough(t *testing.T) {
 	serveRaw(t, nil, nil)
 
-	err := grpcmesh.Publish(context.Background(), shop.OrderTargets.Place, &shop.Order{}, nil)
+	err := protomesh.Publish(context.Background(), shop.OrderTargets.Place, &shop.Order{}, nil)
 
 	if !errors.Is(err, mesh.ErrKindMismatch) {
 		t.Errorf("err = %v, want mesh.ErrKindMismatch unchanged", err)

@@ -10,7 +10,7 @@
 package shop
 
 import (
-	_ "github.com/Paymentbox-com/grpc-service-mesh-go/meshoptions"
+	_ "github.com/Paymentbox-com/proto-service-mesh-go/meshoptions"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -28,7 +28,7 @@ var File_shop_deployment_proto protoreflect.FileDescriptor
 
 const file_shop_deployment_proto_rawDesc = "" +
 	"\n" +
-	"\x15shop/deployment.proto\x12\x04shop\x1a\x12mesh/options.protoBO\xa2\xb5\x18\x03memZFgithub.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shopb\x06proto3"
+	"\x15shop/deployment.proto\x12\x04shop\x1a\x12mesh/options.protoBP\xa2\xb5\x18\x03memZGgithub.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shopb\x06proto3"
 
 var file_shop_deployment_proto_goTypes = []any{}
 var file_shop_deployment_proto_depIdxs = []int32{

@@ -14,12 +14,12 @@ method returns the decoded response, the reply's metadata, and an error. A
 ```go
 md := map[string]string{
     "Tenant": "acme",
-    grpcmesh.OptionPrefix + "request_timeout": "2s",
+    protomesh.OptionPrefix + "request_timeout": "2s",
 }
 
 order, reply, err := shop.OrderClient.Place(ctx, &shop.Order{Item: proto.String("book")}, md)
 
-var me *grpcmesh.MeshError
+var me *protomesh.MeshError
 switch {
 case err == nil:
     fmt.Println(order.GetId(), reply["Request-Id"])
@@ -31,7 +31,7 @@ case errors.As(err, &me):
             fmt.Println(info.GetReason())
         }
     }
-case errors.Is(err, grpcmesh.ErrUnknownTransport):
+case errors.Is(err, protomesh.ErrUnknownTransport):
     // the target's transport is not configured on the router
 default:
     // a Service Mesh API or transport error, unchanged, such as
@@ -45,7 +45,7 @@ err = shop.OrderClient.Placed(ctx, event, md)
 ## Metadata and Transport Options
 
 The keys of the metadata map that start with `Mesh-Option-`
-(`grpcmesh.OptionPrefix`) are transport options. `Call` and `Publish` remove
+(`protomesh.OptionPrefix`) are transport options. `Call` and `Publish` remove
 them from the message metadata and pass each one to the transport's `Request`
 or `Publish` options with the prefix removed. The match is exact and
 case-sensitive.

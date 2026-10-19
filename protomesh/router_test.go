@@ -1,20 +1,20 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"errors"
 	"strings"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/memtransport"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/memtransport"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 )
 
 func TestRouterClientUnknownTransport(t *testing.T) {
-	router := grpcmesh.NewTransportRouter()
+	router := protomesh.NewTransportRouter()
 
 	_, err := router.Client("http")
 
-	if !errors.Is(err, grpcmesh.ErrUnknownTransport) {
+	if !errors.Is(err, protomesh.ErrUnknownTransport) {
 		t.Fatalf("err = %v, want ErrUnknownTransport", err)
 	}
 	if !strings.Contains(err.Error(), "http") {
@@ -23,7 +23,7 @@ func TestRouterClientUnknownTransport(t *testing.T) {
 }
 
 func TestRouterClientReturnsTheClientAdded(t *testing.T) {
-	router := grpcmesh.NewTransportRouter()
+	router := protomesh.NewTransportRouter()
 	added := memClient(t, memtransport.NewHub())
 	router.AddTransport("mem", added)
 
@@ -38,7 +38,7 @@ func TestRouterClientReturnsTheClientAdded(t *testing.T) {
 }
 
 func TestRouterAddTransportUnderAPresentNameReplacesTheClient(t *testing.T) {
-	router := grpcmesh.NewTransportRouter()
+	router := protomesh.NewTransportRouter()
 	hub := memtransport.NewHub()
 	router.AddTransport("mem", memClient(t, hub))
 	second := memClient(t, hub)
@@ -57,9 +57,9 @@ func TestRouterAddTransportUnderAPresentNameReplacesTheClient(t *testing.T) {
 func TestAddTransportAddsToTheDefaultRouter(t *testing.T) {
 	freshSingletons(t)
 	added := memClient(t, memtransport.NewHub())
-	grpcmesh.AddTransport("mem", added)
+	protomesh.AddTransport("mem", added)
 
-	c, err := grpcmesh.DefaultTransportRouter.Client("mem")
+	c, err := protomesh.DefaultTransportRouter.Client("mem")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestAddTransportAddsToTheDefaultRouter(t *testing.T) {
 }
 
 func TestRouterCloseClosesEveryClientAndJoinsTheirErrors(t *testing.T) {
-	router := grpcmesh.NewTransportRouter()
+	router := protomesh.NewTransportRouter()
 	hub := memtransport.NewHub()
 	mem := memClient(t, hub)
 	mem.CloseErr = errors.New("mem flush failed")

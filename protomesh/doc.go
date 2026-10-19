@@ -1,4 +1,4 @@
-// Package grpcmesh is the Go library of the gRPC Service Mesh API. It carries
+// Package protomesh is the Go library of the Proto Service Mesh API. It carries
 // protobuf messages over any transport that implements the Service Mesh API
 // contract in github.com/Paymentbox-com/service-mesh-go/mesh.
 //
@@ -13,7 +13,7 @@
 // application/x-protobuf. A reply that carries a MeshError also carries
 // Grpc-Status, the google.rpc.Code as a decimal string, and its payload is
 // the encoded google.rpc.Status.
-package grpcmesh
+package protomesh
 
 // Metadata keys the package writes and reads.
 const (

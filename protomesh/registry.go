@@ -1,4 +1,4 @@
-package grpcmesh
+package protomesh
 
 import (
 	"fmt"
@@ -85,7 +85,7 @@ func (r *Registry) Register(svc RPCService, opts ...RegisterOption) {
 			}
 		}
 		if !found {
-			panic(fmt.Sprintf("grpcmesh: WithConsumerGroup names target %v, which is not an rpc method of the registered service", tg.target.Segments))
+			panic(fmt.Sprintf("protomesh: WithConsumerGroup names target %v, which is not an rpc method of the registered service", tg.target.Segments))
 		}
 	}
 	r.endpoints = append(r.endpoints, endpoints...)

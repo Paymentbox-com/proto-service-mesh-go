@@ -1,26 +1,26 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/memtransport"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/memtransport"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"github.com/Paymentbox-com/service-mesh-go/mesh"
 )
 
 func TestNewRPCRuntimePassesItsTransportsEndpointsSubscribersAndConfigToNewRuntime(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
-	grpcmesh.Register(served{
+	protomesh.AddTransport("mem", memClient(t, hub))
+	protomesh.Register(served{
 		endpoints:   []mesh.Endpoint{{Target: route("mem", "shop", "A", "Get")}, {Target: route("nats", "billing", "B", "Get")}},
 		subscribers: []mesh.Subscriber{{Target: topic("mem", "shop", "A", "Made")}, {Target: topic("nats", "billing", "B", "Made")}},
 	})
 
-	rt, err := grpcmesh.NewRPCRuntime("mem", "billing", memConfig, hub.NewRuntime)
+	rt, err := protomesh.NewRPCRuntime("mem", "billing", memConfig, hub.NewRuntime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,9 +50,9 @@ func TestNewRPCRuntimePassesTheRoutersClientToNewRuntime(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
 	added := memClient(t, hub)
-	grpcmesh.AddTransport("mem", added)
+	protomesh.AddTransport("mem", added)
 
-	rt, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
+	rt, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,10 +68,10 @@ func TestNewRPCRuntimePassesTheRoutersClientToNewRuntime(t *testing.T) {
 func TestNewRPCRuntimeDeploymentGroupOverridesTheGivenConfig(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
+	protomesh.AddTransport("mem", memClient(t, hub))
 	cfg := mesh.Config{mesh.DeploymentGroupKey: "configured"}
 
-	if _, err := grpcmesh.NewRPCRuntime("mem", "testproto", cfg, hub.NewRuntime); err != nil {
+	if _, err := protomesh.NewRPCRuntime("mem", "testproto", cfg, hub.NewRuntime); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,9 +87,9 @@ func TestNewRPCRuntimeUnknownTransport(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
 
-	_, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
+	_, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
 
-	if !errors.Is(err, grpcmesh.ErrUnknownTransport) {
+	if !errors.Is(err, protomesh.ErrUnknownTransport) {
 		t.Errorf("err = %v, want ErrUnknownTransport", err)
 	}
 	if len(hub.Runtimes()) != 0 {
@@ -100,10 +100,10 @@ func TestNewRPCRuntimeUnknownTransport(t *testing.T) {
 func TestNewRPCRuntimePassesTheNewRuntimeErrorThrough(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
+	protomesh.AddTransport("mem", memClient(t, hub))
 	hub.Fail = errors.New("bad url")
 
-	_, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
+	_, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
 
 	if err != hub.Fail {
 		t.Errorf("err = %v, want newRuntime's error unchanged", err)
@@ -113,8 +113,8 @@ func TestNewRPCRuntimePassesTheNewRuntimeErrorThrough(t *testing.T) {
 func TestRPCRuntimeDelegatesTheLifecycle(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
-	rt, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
+	protomesh.AddTransport("mem", memClient(t, hub))
+	rt, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,8 +141,8 @@ func TestRPCRuntimeStopLeavesTheClientClosed(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
 	added := memClient(t, hub)
-	grpcmesh.AddTransport("mem", added)
-	rt, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
+	protomesh.AddTransport("mem", added)
+	rt, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, hub.NewRuntime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,11 +184,11 @@ func TestRPCRuntimeServesAGeneratedService(t *testing.T) {
 func TestNewRPCRuntimeWithoutARuntimeConstructor(t *testing.T) {
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
+	protomesh.AddTransport("mem", memClient(t, hub))
 
-	_, err := grpcmesh.NewRPCRuntime("mem", "testproto", memConfig, nil)
+	_, err := protomesh.NewRPCRuntime("mem", "testproto", memConfig, nil)
 
-	if !errors.Is(err, grpcmesh.ErrNoRuntimeConstructor) {
+	if !errors.Is(err, protomesh.ErrNoRuntimeConstructor) {
 		t.Errorf("err = %v, want ErrNoRuntimeConstructor", err)
 	}
 }

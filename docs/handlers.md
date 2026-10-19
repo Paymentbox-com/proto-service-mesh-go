@@ -56,7 +56,7 @@ func (o *Orders) Placed(ctx context.Context, ev *shop.Order) error {
 }
 
 orders := &Orders{dbModel: dbModel, logger: logger}
-grpcmesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed})
+protomesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed})
 ```
 
 A nil field is not served, so a process can implement only some of a
@@ -70,8 +70,8 @@ error. The inbound message metadata is on the context, read with
 
 ```go
 func (o *Orders) Place(ctx context.Context, req *shop.Order) (*shop.Order, error) {
-    if grpcmesh.IncomingMetadata(ctx)["Tenant"] == "" {
-        return nil, grpcmesh.NewInvalidArgumentError("Tenant is required",
+    if protomesh.IncomingMetadata(ctx)["Tenant"] == "" {
+        return nil, protomesh.NewInvalidArgumentError("Tenant is required",
             &errdetails.ErrorInfo{Reason: "MISSING_TENANT", Domain: "shop"})
     }
     order := o.dbModel.Create(req.GetItem())
@@ -90,7 +90,7 @@ detail messages. `NewMeshError(code, msg, details...)` takes any
 ```go
 func (o *Orders) Place(ctx context.Context, req *shop.Order) (*shop.Order, error) {
     if !o.dbModel.InStock(req.GetItem()) {
-        return nil, grpcmesh.NewNotFoundError("no such item",
+        return nil, protomesh.NewNotFoundError("no such item",
             &errdetails.ErrorInfo{Reason: "ITEM_MISSING", Domain: "shop"})
     }
     order := o.dbModel.Create(req.GetItem())
@@ -130,10 +130,10 @@ metadata.
 ```go
 func (o *Orders) Place(ctx context.Context, req *shop.Order) (*shop.Order, error) {
     if !o.dbModel.InStock(req.GetItem()) {
-        grpcmesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
-        return nil, grpcmesh.NewNotFoundError("no such item")
+        protomesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
+        return nil, protomesh.NewNotFoundError("no such item")
     }
-    grpcmesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
+    protomesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
     order := o.dbModel.Create(req.GetItem())
     return &shop.Order{Id: proto.String(order.GetId()), Item: proto.String(order.GetItem())}, nil
 }

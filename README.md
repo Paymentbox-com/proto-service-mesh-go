@@ -1,13 +1,13 @@
-# grpc-service-mesh-go
+# proto-service-mesh-go
 
-grpc-service-mesh-go is the Go implementation of the
-[gRPC Service Mesh API](https://github.com/Paymentbox-com/grpc-service-mesh-api).
+proto-service-mesh-go is the Go implementation of the
+[Proto Service Mesh API](https://github.com/Paymentbox-com/proto-service-mesh-api).
 It carries protobuf messages over any transport that implements the
 [Service Mesh API Specification](https://github.com/Paymentbox-com/service-mesh-api)
 through the Go contract in
 [service-mesh-go](https://github.com/Paymentbox-com/service-mesh-go).
 
-The `grpcmesh` package holds the specification's non-generated types:
+The `protomesh` package holds the specification's non-generated types:
 * `TransportRouter`
 * `Registry`
 * `RPCRuntime`
@@ -19,21 +19,21 @@ It also holds the generic helpers that generated code calls:
 * `Call`
 * `Publish`
 
-Generated code comes from `grpc-service-mesh-gen` in the specification
+Generated code comes from `proto-service-mesh-gen` in the specification
 repository and lives in a definitions project.
 
 ## Install
 
-The module is `github.com/Paymentbox-com/grpc-service-mesh-go`, and its one
-package, `grpcmesh`, is imported as
-`github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh`.
+The module is `github.com/Paymentbox-com/proto-service-mesh-go`, and its one
+package, `protomesh`, is imported as
+`github.com/Paymentbox-com/proto-service-mesh-go/protomesh`.
 
 ```sh
-go get github.com/Paymentbox-com/grpc-service-mesh-go
+go get github.com/Paymentbox-com/proto-service-mesh-go
 ```
 
 ```go
-import "github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
+import "github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 ```
 
 Requires Go 1.26 or newer. The module depends on
@@ -45,7 +45,7 @@ No transport is a dependency. The application adds the transport module it uses.
 ## Usage
 
 An application uses this library through the generated code that depends on it. The
-[gRPC Service Mesh API](https://github.com/Paymentbox-com/grpc-service-mesh-api) describes how Go code is
+[Proto Service Mesh API](https://github.com/Paymentbox-com/proto-service-mesh-api) describes how Go code is
 generated from `.proto` files.
 
 ### Reference Examples
@@ -54,7 +54,7 @@ The examples in these docs use the reference definitions in `internal/testproto/
 `shop.OrderService`, with a `ROUTE` method `Place` and a `TOPIC` method `Placed`, in deployment group `shop` over the
 transport named `mem`, the in-memory transport the tests use. The generated package is `shop`, and the generated
 per-transport maps are in `servicemaps`. The generated code is in `internal/testproto/`, written by
-`grpc-service-mesh-gen` as a consumer would generate it, and described under [Generated Code](docs/generated-code.md).
+`proto-service-mesh-gen` as a consumer would generate it, and described under [Generated Code](docs/generated-code.md).
 
 ## Documentation
 
@@ -63,5 +63,5 @@ per-transport maps are in `servicemaps`. The generated code is in `internal/test
 - [Calling](docs/calling.md): calling generated clients, metadata and transport options, reply metadata, and the wire format
 - [MeshError](docs/mesherror.md): constructing and reading `MeshError`, and the errors the library returns
 - [Generated Code](docs/generated-code.md): the generated reference output for Go, and what generated code relies on in this package
-- [Public API](docs/public-api.md): every exported name in `grpcmesh`
+- [Public API](docs/public-api.md): every exported name in `protomesh`
 - [Development](docs/development.md): the specification protos, the recipes, and the tests

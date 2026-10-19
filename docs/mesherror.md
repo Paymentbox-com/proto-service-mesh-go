@@ -11,14 +11,14 @@ details.
 `MeshError` implements `error`.
 
 ```go
-me := grpcmesh.NewNotFoundError("no such item", &errdetails.ErrorInfo{Reason: "GONE"})
-me.Code()    // grpcmesh.NotFound, which is code.Code_NOT_FOUND
+me := protomesh.NewNotFoundError("no such item", &errdetails.ErrorInfo{Reason: "GONE"})
+me.Code()    // protomesh.NotFound, which is code.Code_NOT_FOUND
 me.Message() // "no such item"
 me.Details() // []*anypb.Any
 me.Proto()   // the wrapped *status.Status
 me.Error()   // "NOT_FOUND: no such item"
 
-back := grpcmesh.MeshErrorFromProto(st) // st is a *status.Status; the MeshError wraps it itself
+back := protomesh.MeshErrorFromProto(st) // st is a *status.Status; the MeshError wraps it itself
 ```
 
 ## Constructing a MeshError
@@ -40,13 +40,13 @@ so a reply never claims details it does not carry.
 ## Reading a MeshError
 
 The codes are exported as constants of the `code.Code` type, such as
-`grpcmesh.OK`, `grpcmesh.NotFound`, and `grpcmesh.Internal`, so handler and
+`protomesh.OK`, `protomesh.NotFound`, and `protomesh.Internal`, so handler and
 caller code compares codes without importing the `code` package. A caller
 finds a `*MeshError` with `errors.As` and tells codes apart with `Code()`.
 
 ```go
-var me *grpcmesh.MeshError
-if errors.As(err, &me) && me.Code() == grpcmesh.NotFound {
+var me *protomesh.MeshError
+if errors.As(err, &me) && me.Code() == protomesh.NotFound {
     // the order does not exist
 }
 ```

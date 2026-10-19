@@ -1,4 +1,4 @@
-module github.com/Paymentbox-com/grpc-service-mesh-go
+module github.com/Paymentbox-com/proto-service-mesh-go
 
 go 1.26.6
 

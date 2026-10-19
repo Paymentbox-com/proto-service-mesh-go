@@ -1,5 +1,5 @@
 // Package memtransport is an in-process Service Mesh API transport for the
-// grpcmesh tests. A Hub stands in for the broker: every Client it builds, and
+// protomesh tests. A Hub stands in for the broker: every Client it builds, and
 // every Runtime bound on one of those clients, delivers through it, and it
 // records what it built.
 //
@@ -48,7 +48,7 @@ func NewHub() *Hub {
 }
 
 // NewClient builds the client an application would add to the
-// grpcmesh.TransportRouter.
+// protomesh.TransportRouter.
 func (h *Hub) NewClient(cfg mesh.Config, sm mesh.ServiceMap) (mesh.Client, error) {
 	c := &Client{Config: cfg, ServiceMap: sm, hub: h}
 	h.mu.Lock()
@@ -57,7 +57,7 @@ func (h *Hub) NewClient(cfg mesh.Config, sm mesh.ServiceMap) (mesh.Client, error
 	return c, nil
 }
 
-// NewRuntime is a grpcmesh.NewRuntimeFunc. The client
+// NewRuntime is a protomesh.NewRuntimeFunc. The client
 // is one this package built, and the runtime binds on that client's hub.
 func (h *Hub) NewRuntime(client mesh.Client, cfg mesh.Config, endpoints []mesh.Endpoint, subscribers []mesh.Subscriber) (mesh.Runtime, error) {
 	if h.Fail != nil {

@@ -8,7 +8,7 @@ step.
 
 ## Configuring the TransportRouter at Boot
 
-`grpcmesh.DefaultTransportRouter` is the process-wide router. It holds one
+`protomesh.DefaultTransportRouter` is the process-wide router. It holds one
 `mesh.Client` per transport name. The application builds one transport
 `Client` per transport name its definitions use, with the transport's
 configuration and the generated `ServiceMap` for that transport, and adds it
@@ -17,13 +17,13 @@ not of this library.
 
 ```go
 import (
-    "github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
+    "github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 
     "example.com/definitions/servicemaps"
 )
 
 // client is the transport's mesh.Client, built from its configuration and servicemaps.Mem.
-grpcmesh.AddTransport("mem", client)
+protomesh.AddTransport("mem", client)
 ```
 
 The application owns each client and the connection it holds. Clients are
@@ -49,14 +49,14 @@ transport, and its `Stop` closes that client as well.
 ## Registering a Service
 
 The application implements a generated `RPCService` as described under
-[Handlers](handlers.md), and registers the value in `grpcmesh.DefaultRegistry`.
+[Handlers](handlers.md), and registers the value in `protomesh.DefaultRegistry`.
 Each rpc method it implements becomes a Service Mesh API `Endpoint` or
 `Subscriber`, which an `RPCRuntime` passes to the transport's `Runtime`. An rpc
 method whose field is nil is not served.
 
 ```go
 orders := &Orders{dbModel: dbModel, logger: logger}
-grpcmesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed})
+protomesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed})
 ```
 
 The registry keeps every endpoint and subscriber registered with it. If two
@@ -69,8 +69,8 @@ endpoints or subscribers for it.
 endpoints and subscribers, by target:
 
 ```go
-grpcmesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed},
-    grpcmesh.WithConsumerGroup(shop.OrderTargets.Placed, "billing-ledger"))
+protomesh.Register(shop.OrderService{Place: orders.Place, Placed: orders.Placed},
+    protomesh.WithConsumerGroup(shop.OrderTargets.Placed, "billing-ledger"))
 ```
 
 A consumer group decides which instances share each message: only one instance
@@ -116,7 +116,7 @@ passes to it, which is the one added under the transport's name.
 Services registered after the constructor has run are not served.
 
 ```go
-rt, err := grpcmesh.NewRPCRuntime("mem", "shop", mesh.Config{}, newRuntime)
+rt, err := protomesh.NewRPCRuntime("mem", "shop", mesh.Config{}, newRuntime)
 if err != nil { /* a library error, or the error newRuntime returns */ }
 if err := rt.Start(ctx); err != nil { /* the transport's error */ }
 

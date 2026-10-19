@@ -9,7 +9,7 @@ and tests used during development.
 `meshoptions/` is package `meshoptions`, the `protoc-gen-go` output of the
 specification's `mesh/options.proto`, whose `go_package` names it. It registers
 the extensions `mesh.kind`, `mesh.consumer_group`, `mesh.transport`, and `mesh.root_prefix`. It is compiled from the
-[grpc-service-mesh-api](https://github.com/Paymentbox-com/grpc-service-mesh-api)
+[proto-service-mesh-api](https://github.com/Paymentbox-com/proto-service-mesh-api)
 tag named by `spec_tag` in the `justfile`.
 
 The compiled forms of `google/rpc/*.proto` are the published ones in
@@ -20,12 +20,12 @@ The Go message file that `protoc-gen-go` writes from it then imports
 `meshoptions`, so a definitions project's Go module requires this module.
 
 A project that runs plain `protoc` itself takes the specification's files from
-the directory that `grpc-service-mesh-gen proto-path` prints:
+the directory that `proto-service-mesh-gen proto-path` prints:
 
 ```sh
 protoc \
   -I definitions \
-  -I "$(grpc-service-mesh-gen proto-path)" \
+  -I "$(proto-service-mesh-gen proto-path)" \
   --go_out=lib/go --go_opt=paths=source_relative \
   $(find definitions -name '*.proto')
 ```
@@ -39,7 +39,7 @@ the message types.
 
 `meshoptions/options.pb.go` is the compiled form of `mesh/options.proto` in the
 specification repository,
-[grpc-service-mesh-api](https://github.com/Paymentbox-com/grpc-service-mesh-api),
+[proto-service-mesh-api](https://github.com/Paymentbox-com/proto-service-mesh-api),
 at the tag `spec_tag` names in the `justfile`. It is never edited here. `just
 proto-spec` makes a shallow clone of that tag in a temporary directory,
 compiles `mesh/options.proto` from it with `protoc` and `protoc-gen-go`, and
@@ -75,8 +75,8 @@ recipes.
 | `just build` | Compiles everything. |
 | `just test` | Runs the test suite with the race detector. |
 | `just proto` | Runs `just proto-spec` and `just proto-test`. |
-| `just proto-spec` | Compiles `mesh/options.proto` from grpc-service-mesh-api at `spec_tag` into `meshoptions/options.pb.go`. |
-| `just proto-test` | Regenerates `internal/testproto/` from `internal/testproto/definitions/` with `grpc-service-mesh-gen` at `gen_version`. |
+| `just proto-spec` | Compiles `mesh/options.proto` from proto-service-mesh-api at `spec_tag` into `meshoptions/options.pb.go`. |
+| `just proto-test` | Regenerates `internal/testproto/` from `internal/testproto/definitions/` with `proto-service-mesh-gen` at `gen_version`. |
 | `just vet` | Runs `go vet`. |
 | `just fmt` | Formats the code in place with `gofmt`. |
 | `just tidy` | Reconciles `go.mod` and `go.sum`. |
@@ -97,7 +97,7 @@ and what it sent, so nothing in this repository needs a broker.
 `internal/testproto/` holds the reference output shown under
 [Generated Code](generated-code.md), generated from the definitions in
 `internal/testproto/definitions/`. `just proto-test` deletes the generated
-files and runs `grpc-service-mesh-gen` at `gen_version` to write them again.
+files and runs `proto-service-mesh-gen` at `gen_version` to write them again.
 CI runs `just proto` and fails when the result differs from what is committed.
 Adopting a new generator version means setting `gen_version`, running
 `just proto`, and reviewing the diff.

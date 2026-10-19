@@ -1,4 +1,4 @@
-# Task runner for grpc-service-mesh-go. Run `just` with no arguments to see the menu.
+# Task runner for proto-service-mesh-go. Run `just` with no arguments to see the menu.
 #
 # Every Go recipe runs through `mise exec` so it uses the toolchain pinned in
 # mise.toml without relying on the shell's mise activation. If you ever run just
@@ -20,8 +20,8 @@ build:
 test:
     {{go}} test -race ./...
 
-# The grpc-service-mesh-api tag whose mesh/options.proto meshoptions is compiled from
-spec_tag := "v0.9.0"
+# The proto-service-mesh-api tag whose mesh/options.proto meshoptions is compiled from
+spec_tag := "v0.11.0"
 
 # Regenerate meshoptions/options.pb.go from the specification at {{spec_tag}}
 # and regenerate the reference output in internal/testproto. protoc is found on PATH;
@@ -29,26 +29,26 @@ spec_tag := "v0.9.0"
 [group('build')]
 proto: proto-spec proto-test
 
-# Compile mesh/options.proto from a shallow clone of grpc-service-mesh-api at {{spec_tag}} into meshoptions/options.pb.go
+# Compile mesh/options.proto from a shallow clone of proto-service-mesh-api at {{spec_tag}} into meshoptions/options.pb.go
 [group('build')]
 proto-spec:
     #!/usr/bin/env bash
     set -euo pipefail
     spec="$(mktemp -d)"
     trap 'rm -rf "$spec"' EXIT
-    git -c advice.detachedHead=false clone --quiet --depth 1 --branch {{spec_tag}} https://github.com/Paymentbox-com/grpc-service-mesh-api "$spec"
-    mise exec -- protoc --proto_path="$spec" --go_out=. --go_opt=module=github.com/Paymentbox-com/grpc-service-mesh-go "$spec/mesh/options.proto"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch {{spec_tag}} https://github.com/Paymentbox-com/proto-service-mesh-api "$spec"
+    mise exec -- protoc --proto_path="$spec" --go_out=. --go_opt=module=github.com/Paymentbox-com/proto-service-mesh-go "$spec/mesh/options.proto"
 
-# The grpc-service-mesh-gen version the reference output in internal/testproto is generated with
-gen_version := "v0.9.0"
+# The proto-service-mesh-gen version the reference output in internal/testproto is generated with
+gen_version := "v0.11.0"
 
-# Regenerate internal/testproto from internal/testproto/definitions with grpc-service-mesh-gen at {{gen_version}}
+# Regenerate internal/testproto from internal/testproto/definitions with proto-service-mesh-gen at {{gen_version}}
 [group('build')]
 proto-test:
     #!/usr/bin/env bash
     set -euo pipefail
     { grep -rl --include='*.go' 'DO NOT EDIT' internal/testproto || true; } | xargs rm -f
-    mise exec -- go run github.com/Paymentbox-com/grpc-service-mesh-api/cmd/grpc-service-mesh-gen@{{gen_version}} \
+    mise exec -- go run github.com/Paymentbox-com/proto-service-mesh-api/cmd/proto-service-mesh-gen@{{gen_version}} \
         --definitions internal/testproto/definitions --go_out=internal/testproto
 
 # Run go vet
@@ -103,7 +103,7 @@ release:
     test -z "$(git status --porcelain)" || (echo "commit or stash your changes first" && exit 1)
     git tag -a {{version}} -m "{{version}}"
     git push origin {{version}}
-    GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod {{go}} list -m github.com/Paymentbox-com/grpc-service-mesh-go@{{version}}
+    GOPROXY=https://proxy.golang.org GOFLAGS=-mod=mod {{go}} list -m github.com/Paymentbox-com/proto-service-mesh-go@{{version}}
 
 # Bump the version in VERSION by one patch, minor, or major step and commit that file: just bump patch
 [group('release')]

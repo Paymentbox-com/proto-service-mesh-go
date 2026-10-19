@@ -1,13 +1,13 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"context"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/memtransport"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/servicemaps"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/memtransport"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/servicemaps"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"github.com/Paymentbox-com/service-mesh-go/mesh"
 	"google.golang.org/protobuf/proto"
 )
@@ -20,12 +20,12 @@ var memServiceMap = servicemaps.Mem
 // DefaultRegistry for the test and restores the previous ones afterwards.
 func freshSingletons(t *testing.T) {
 	t.Helper()
-	router, registry := grpcmesh.DefaultTransportRouter, grpcmesh.DefaultRegistry
-	grpcmesh.DefaultTransportRouter = grpcmesh.NewTransportRouter()
-	grpcmesh.DefaultRegistry = grpcmesh.NewRegistry()
+	router, registry := protomesh.DefaultTransportRouter, protomesh.DefaultRegistry
+	protomesh.DefaultTransportRouter = protomesh.NewTransportRouter()
+	protomesh.DefaultRegistry = protomesh.NewRegistry()
 	t.Cleanup(func() {
-		grpcmesh.DefaultTransportRouter = router
-		grpcmesh.DefaultRegistry = registry
+		protomesh.DefaultTransportRouter = router
+		protomesh.DefaultRegistry = registry
 	})
 }
 
@@ -42,13 +42,13 @@ func memClient(t *testing.T, hub *memtransport.Hub) *memtransport.Client {
 
 // serveMem configures the singletons with transport "mem" on a new hub,
 // registers svc, and starts an RPCRuntime for it. It returns the hub.
-func serveMem(t *testing.T, svc grpcmesh.RPCService) *memtransport.Hub {
+func serveMem(t *testing.T, svc protomesh.RPCService) *memtransport.Hub {
 	t.Helper()
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
-	grpcmesh.Register(svc)
-	rt, err := grpcmesh.NewRPCRuntime("mem", "shop", memConfig, hub.NewRuntime)
+	protomesh.AddTransport("mem", memClient(t, hub))
+	protomesh.Register(svc)
+	rt, err := protomesh.NewRPCRuntime("mem", "shop", memConfig, hub.NewRuntime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func serveRaw(t *testing.T, endpoints []mesh.Endpoint, subscribers []mesh.Subscr
 	t.Helper()
 	freshSingletons(t)
 	hub := memtransport.NewHub()
-	grpcmesh.AddTransport("mem", memClient(t, hub))
+	protomesh.AddTransport("mem", memClient(t, hub))
 	cfg := mesh.Config{mesh.DeploymentGroupKey: "shop"}
 	c, err := hub.NewClient(cfg, memServiceMap)
 	if err != nil {

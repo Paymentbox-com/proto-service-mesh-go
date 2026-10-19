@@ -1,17 +1,17 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestNewMeshErrorCarriesCodeAndMessage(t *testing.T) {
-	me := grpcmesh.NewMeshError(code.Code_NOT_FOUND, "no such key")
+	me := protomesh.NewMeshError(code.Code_NOT_FOUND, "no such key")
 
 	if me.Code() != code.Code_NOT_FOUND {
 		t.Errorf("Code() = %v, want NOT_FOUND", me.Code())
@@ -29,9 +29,9 @@ func TestNewMeshErrorCarriesCodeAndMessage(t *testing.T) {
 
 func TestNewMeshErrorDetailsRoundTripThroughProto(t *testing.T) {
 	info := &errdetails.ErrorInfo{Reason: "EXPIRED", Domain: "shop"}
-	me := grpcmesh.NewMeshError(code.Code_FAILED_PRECONDITION, "expired", info)
+	me := protomesh.NewMeshError(code.Code_FAILED_PRECONDITION, "expired", info)
 
-	back := grpcmesh.MeshErrorFromProto(me.Proto())
+	back := protomesh.MeshErrorFromProto(me.Proto())
 
 	if back.Code() != code.Code_FAILED_PRECONDITION || back.Message() != "expired" {
 		t.Errorf("round trip gave %v %q", back.Code(), back.Message())
@@ -51,7 +51,7 @@ func TestNewMeshErrorDetailsRoundTripThroughProto(t *testing.T) {
 func TestNewMeshErrorWithUnpackableDetailIsInternal(t *testing.T) {
 	bad := &errdetails.ErrorInfo{Reason: "\xff"} // invalid UTF-8 in a proto3 string
 
-	me := grpcmesh.NewMeshError(code.Code_NOT_FOUND, "no such key", bad)
+	me := protomesh.NewMeshError(code.Code_NOT_FOUND, "no such key", bad)
 
 	if me.Code() != code.Code_INTERNAL {
 		t.Errorf("Code() = %v, want INTERNAL", me.Code())
@@ -65,7 +65,7 @@ func TestNewMeshErrorWithUnpackableDetailIsInternal(t *testing.T) {
 }
 
 func TestMeshErrorTextIsCodeNameAndMessage(t *testing.T) {
-	err := error(grpcmesh.NewMeshError(code.Code_PERMISSION_DENIED, "not yours"))
+	err := error(protomesh.NewMeshError(code.Code_PERMISSION_DENIED, "not yours"))
 
 	if err.Error() != "PERMISSION_DENIED: not yours" {
 		t.Errorf("Error() = %q", err.Error())

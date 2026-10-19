@@ -1,4 +1,4 @@
-package grpcmesh_test
+package protomesh_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/grpcmesh"
-	"github.com/Paymentbox-com/grpc-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/internal/testproto/shop"
+	"github.com/Paymentbox-com/proto-service-mesh-go/protomesh"
 	"github.com/Paymentbox-com/service-mesh-go/mesh"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -29,7 +29,7 @@ func statusOf(t *testing.T, reply mesh.Message) *status.Status {
 
 func TestEndpointRepliesWithTheEncodedResponse(t *testing.T) {
 	var got *shop.Order
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(_ context.Context, req *shop.Order) (*shop.Order, error) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(_ context.Context, req *shop.Order) (*shop.Order, error) {
 		got = req
 		return order("reply"), nil
 	})
@@ -52,18 +52,18 @@ func TestEndpointRepliesWithTheEncodedResponse(t *testing.T) {
 	if resp.GetId() != "reply" {
 		t.Errorf("reply decodes to %v", &resp)
 	}
-	if reply.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
 	}
-	if _, ok := reply.Metadata[grpcmesh.GrpcStatusKey]; ok {
+	if _, ok := reply.Metadata[protomesh.GrpcStatusKey]; ok {
 		t.Error("a successful reply carries Grpc-Status")
 	}
 }
 
 func TestEndpointExposesTheIncomingMetadata(t *testing.T) {
 	var seen map[string]string
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		seen = grpcmesh.IncomingMetadata(ctx)
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		seen = protomesh.IncomingMetadata(ctx)
 		return &shop.Order{}, nil
 	})
 
@@ -77,8 +77,8 @@ func TestEndpointExposesTheIncomingMetadata(t *testing.T) {
 }
 
 func TestEndpointRepliesAMeshErrorAsAStatus(t *testing.T) {
-	me := grpcmesh.NewMeshError(code.Code_NOT_FOUND, "no such key", &errdetails.ErrorInfo{Reason: "GONE"})
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+	me := protomesh.NewMeshError(code.Code_NOT_FOUND, "no such key", &errdetails.ErrorInfo{Reason: "GONE"})
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
 		return nil, me
 	})
 
@@ -87,10 +87,10 @@ func TestEndpointRepliesAMeshErrorAsAStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
+		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[protomesh.GrpcStatusKey])
 	}
-	if reply.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
 	}
 	st := statusOf(t, reply)
@@ -100,7 +100,7 @@ func TestEndpointRepliesAMeshErrorAsAStatus(t *testing.T) {
 }
 
 func TestEndpointRepliesUnknownForAnyOtherError(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
 		return nil, errors.New("database down")
 	})
 
@@ -109,8 +109,8 @@ func TestEndpointRepliesUnknownForAnyOtherError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "2" {
-		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "2" {
+		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[protomesh.GrpcStatusKey])
 	}
 	st := statusOf(t, reply)
 	if st.GetCode() != 2 || st.GetMessage() != "database down" {
@@ -119,7 +119,7 @@ func TestEndpointRepliesUnknownForAnyOtherError(t *testing.T) {
 }
 
 func TestEndpointRepliesUnknownForAPanic(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
 		panic("boom")
 	})
 
@@ -128,8 +128,8 @@ func TestEndpointRepliesUnknownForAPanic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "2" {
-		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "2" {
+		t.Errorf("Grpc-Status = %q, want 2", reply.Metadata[protomesh.GrpcStatusKey])
 	}
 	if st := statusOf(t, reply); !strings.Contains(st.GetMessage(), "boom") {
 		t.Errorf("status message = %q, want the panic value in it", st.GetMessage())
@@ -137,9 +137,9 @@ func TestEndpointRepliesUnknownForAPanic(t *testing.T) {
 }
 
 func TestEndpointRepliesWithTheReplyMetadataTheHandlerSets(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7", "Region": "east"})
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{"Region": "west"})
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		protomesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7", "Region": "east"})
+		protomesh.SetReplyMetadata(ctx, map[string]string{"Region": "west"})
 		return order("reply"), nil
 	})
 
@@ -151,15 +151,15 @@ func TestEndpointRepliesWithTheReplyMetadataTheHandlerSets(t *testing.T) {
 	if reply.Metadata["Request-Id"] != "7" || reply.Metadata["Region"] != "west" {
 		t.Errorf("reply metadata = %v, want Request-Id 7 and the later Region west", reply.Metadata)
 	}
-	if reply.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
+	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
 		t.Errorf("reply metadata = %v, want Content-Type", reply.Metadata)
 	}
 }
 
 func TestEndpointRepliesAMeshErrorWithTheReplyMetadataTheHandlerSets(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
-		return nil, grpcmesh.NewNotFoundError("no such key")
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		protomesh.SetReplyMetadata(ctx, map[string]string{"Retry-After": "30"})
+		return nil, protomesh.NewNotFoundError("no such key")
 	})
 
 	reply, err := ep.Handler(context.Background(), mesh.Message{})
@@ -170,14 +170,14 @@ func TestEndpointRepliesAMeshErrorWithTheReplyMetadataTheHandlerSets(t *testing.
 	if reply.Metadata["Retry-After"] != "30" {
 		t.Errorf("reply metadata = %v, want Retry-After", reply.Metadata)
 	}
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
+		t.Errorf("Grpc-Status = %q, want 5", reply.Metadata[protomesh.GrpcStatusKey])
 	}
 }
 
 func TestEndpointDropsOptionKeysTheHandlerSetsOnItsReply(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7", "Mesh-Option-request_timeout": "2s"})
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		protomesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7", "Mesh-Option-request_timeout": "2s"})
 		return order("reply"), nil
 	})
 
@@ -195,9 +195,9 @@ func TestEndpointDropsOptionKeysTheHandlerSetsOnItsReply(t *testing.T) {
 }
 
 func TestEndpointOverwritesContentTypeAndGrpcStatusTheHandlerSetsOnAMeshErrorReply(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{grpcmesh.ContentTypeKey: "text/plain", grpcmesh.GrpcStatusKey: "0"})
-		return nil, grpcmesh.NewNotFoundError("no such key")
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		protomesh.SetReplyMetadata(ctx, map[string]string{protomesh.ContentTypeKey: "text/plain", protomesh.GrpcStatusKey: "0"})
+		return nil, protomesh.NewNotFoundError("no such key")
 	})
 
 	reply, err := ep.Handler(context.Background(), mesh.Message{})
@@ -205,17 +205,17 @@ func TestEndpointOverwritesContentTypeAndGrpcStatusTheHandlerSetsOnAMeshErrorRep
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[grpcmesh.ContentTypeKey])
+	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.ContentTypeKey])
 	}
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "5" {
-		t.Errorf("Grpc-Status = %q, want the package's 5 over the handler's", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "5" {
+		t.Errorf("Grpc-Status = %q, want the package's 5 over the handler's", reply.Metadata[protomesh.GrpcStatusKey])
 	}
 }
 
 func TestEndpointOverwritesContentTypeAndDropsGrpcStatusTheHandlerSetsOnASuccessfulReply(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{grpcmesh.ContentTypeKey: "text/plain", grpcmesh.GrpcStatusKey: "5"})
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(ctx context.Context, _ *shop.Order) (*shop.Order, error) {
+		protomesh.SetReplyMetadata(ctx, map[string]string{protomesh.ContentTypeKey: "text/plain", protomesh.GrpcStatusKey: "5"})
 		return order("reply"), nil
 	})
 
@@ -224,17 +224,17 @@ func TestEndpointOverwritesContentTypeAndDropsGrpcStatusTheHandlerSetsOnASuccess
 		t.Fatal(err)
 	}
 
-	if reply.Metadata[grpcmesh.ContentTypeKey] != grpcmesh.ContentTypeProtobuf {
-		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[grpcmesh.ContentTypeKey])
+	if reply.Metadata[protomesh.ContentTypeKey] != protomesh.ContentTypeProtobuf {
+		t.Errorf("Content-Type = %q, want the package's value over the handler's", reply.Metadata[protomesh.ContentTypeKey])
 	}
-	if v, ok := reply.Metadata[grpcmesh.GrpcStatusKey]; ok {
+	if v, ok := reply.Metadata[protomesh.GrpcStatusKey]; ok {
 		t.Errorf("Grpc-Status = %q on a successful reply, want none", v)
 	}
 }
 
 func TestEndpointRepliesInternalForAnUndecodableRequest(t *testing.T) {
 	called := false
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) {
 		called = true
 		return nil, nil
 	})
@@ -247,8 +247,8 @@ func TestEndpointRepliesInternalForAnUndecodableRequest(t *testing.T) {
 	if called {
 		t.Error("handler ran on an undecodable request")
 	}
-	if reply.Metadata[grpcmesh.GrpcStatusKey] != "13" {
-		t.Errorf("Grpc-Status = %q, want 13", reply.Metadata[grpcmesh.GrpcStatusKey])
+	if reply.Metadata[protomesh.GrpcStatusKey] != "13" {
+		t.Errorf("Grpc-Status = %q, want 13", reply.Metadata[protomesh.GrpcStatusKey])
 	}
 	if st := statusOf(t, reply); st.GetCode() != 13 || !strings.HasPrefix(st.GetMessage(), "request does not decode as shop.Order: ") {
 		t.Errorf("status = %v, want INTERNAL naming the request type", st)
@@ -258,8 +258,8 @@ func TestEndpointRepliesInternalForAnUndecodableRequest(t *testing.T) {
 func TestSubscriberDeliversTheDecodedMessageAndMetadata(t *testing.T) {
 	var got *shop.Order
 	var seen map[string]string
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "", func(ctx context.Context, req *shop.Order) error {
-		got, seen = req, grpcmesh.IncomingMetadata(ctx)
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(ctx context.Context, req *shop.Order) error {
+		got, seen = req, protomesh.IncomingMetadata(ctx)
 		return nil
 	})
 
@@ -284,7 +284,7 @@ func TestSubscriberDeliversTheDecodedMessageAndMetadata(t *testing.T) {
 
 func TestSubscriberReturnsTheHandlerErrorUnchanged(t *testing.T) {
 	failure := errors.New("cannot record")
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error {
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error {
 		return failure
 	})
 
@@ -297,7 +297,7 @@ func TestSubscriberReturnsTheHandlerErrorUnchanged(t *testing.T) {
 
 func TestSubscriberReturnsTheDecodeErrorWithoutRunningTheHandler(t *testing.T) {
 	called := false
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error {
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error {
 		called = true
 		return nil
 	})
@@ -313,8 +313,8 @@ func TestSubscriberReturnsTheDecodeErrorWithoutRunningTheHandler(t *testing.T) {
 }
 
 func TestSetReplyMetadataInASubscriberHasNoEffect(t *testing.T) {
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "", func(ctx context.Context, _ *shop.Order) error {
-		grpcmesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(ctx context.Context, _ *shop.Order) error {
+		protomesh.SetReplyMetadata(ctx, map[string]string{"Request-Id": "7"})
 		return nil
 	})
 
@@ -326,14 +326,14 @@ func TestSetReplyMetadataInASubscriberHasNoEffect(t *testing.T) {
 }
 
 func TestIncomingMetadataOutsideAHandlerIsNil(t *testing.T) {
-	if md := grpcmesh.IncomingMetadata(context.Background()); md != nil {
+	if md := protomesh.IncomingMetadata(context.Background()); md != nil {
 		t.Errorf("IncomingMetadata = %v, want nil", md)
 	}
 }
 
 func TestNewEndpointAndNewSubscriberPutTheConsumerGroupInMetadata(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "orders", func(context.Context, *shop.Order) (*shop.Order, error) { return nil, nil })
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "audit", func(context.Context, *shop.Order) error { return nil })
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "orders", func(context.Context, *shop.Order) (*shop.Order, error) { return nil, nil })
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "audit", func(context.Context, *shop.Order) error { return nil })
 
 	if got := ep.Metadata[mesh.ConsumerGroupKey]; got != "orders" {
 		t.Errorf("endpoint consumer_group = %q, want orders", got)
@@ -344,8 +344,8 @@ func TestNewEndpointAndNewSubscriberPutTheConsumerGroupInMetadata(t *testing.T) 
 }
 
 func TestNewEndpointAndNewSubscriberWithoutAConsumerGroupSetNoMetadata(t *testing.T) {
-	ep := grpcmesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) { return nil, nil })
-	sub := grpcmesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error { return nil })
+	ep := protomesh.NewEndpoint(shop.OrderTargets.Place, "", func(context.Context, *shop.Order) (*shop.Order, error) { return nil, nil })
+	sub := protomesh.NewSubscriber(shop.OrderTargets.Placed, "", func(context.Context, *shop.Order) error { return nil })
 
 	if _, set := ep.Metadata[mesh.ConsumerGroupKey]; set {
 		t.Errorf("endpoint metadata = %v, want no consumer_group", ep.Metadata)

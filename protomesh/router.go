@@ -1,4 +1,4 @@
-package grpcmesh
+package protomesh
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 
 // ErrUnknownTransport is returned, wrapped with the transport name, when no
 // client has been added to the TransportRouter under a transport name.
-var ErrUnknownTransport = errors.New("grpcmesh: unknown transport")
+var ErrUnknownTransport = errors.New("protomesh: unknown transport")
 
 // TransportRouter holds one mesh.Client per transport name: the
 // transport-specific client the application built. Close closes every

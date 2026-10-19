@@ -3,7 +3,7 @@ package meshoptions_test
 import (
 	"testing"
 
-	"github.com/Paymentbox-com/grpc-service-mesh-go/meshoptions"
+	"github.com/Paymentbox-com/proto-service-mesh-go/meshoptions"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )

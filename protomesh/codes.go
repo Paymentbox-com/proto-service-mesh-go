@@ -1,4 +1,4 @@
-package grpcmesh
+package protomesh
 
 import (
 	"google.golang.org/genproto/googleapis/rpc/code"
