@@ -7,9 +7,9 @@ definitions project, and it is not edited by hand.
 
 The specification is the reference for everything about generating it:
 
-- [Generator](https://github.com/Paymentbox-com/proto-service-mesh-api/blob/master/docs/generator.md) covers installing and running
+- [Generator](https://github.com/Paymentbox-com/proto-service-mesh-api/blob/main/docs/generator.md) covers installing and running
   `proto-service-mesh-gen`, its flags, and the files it writes.
-- [Generated Code](https://github.com/Paymentbox-com/proto-service-mesh-api/blob/master/docs/generated-code.md) covers what is generated for each
+- [Generated Code](https://github.com/Paymentbox-com/proto-service-mesh-api/blob/main/docs/generated-code.md) covers what is generated for each
   service and how the types and `ServiceMaps` are named.
 
 This page shows the Go output for this library's reference definitions, and

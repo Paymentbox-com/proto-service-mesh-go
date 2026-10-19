@@ -54,7 +54,7 @@ add them, so the diff is reviewed before a tag is adopted. To adopt one:
 3. Review the diff under `meshoptions/`.
 4. Run `just check`.
 5. Run `just bump patch`, `just bump minor`, or `just bump major`, which commits
-   the new `VERSION`, then push `master`, wait for CI to pass, and run `just release`.
+   the new `VERSION`, then push `main`, wait for CI to pass, and run `just release`.
 
 The extension numbers in `mesh/options.proto` are part of every definitions
 project's compiled descriptors, so a definitions project regenerates its code
